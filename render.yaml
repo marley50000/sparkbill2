@@ -8,7 +8,6 @@ services:
   - type: web
     name: billspark-api
     runtime: node
-    plan: free
     rootDir: backend
     buildCommand: npm install --production=false && npx prisma generate
     startCommand: npm run start:render
@@ -33,7 +32,6 @@ services:
   - type: web
     name: billspark-web
     runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install --production=false --legacy-peer-deps && npm run build
     staticPublishPath: dist
