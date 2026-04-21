@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  CASHIER
+}
+
+enum PaymentType {
+  CASH
+  MOMO
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("GHS")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  products  Product[]
+  sales     Sale[]
+  stockLogs StockLog[]
+
+  @@index([name])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  businessId   String
+  fullName     String
+  email        String   @unique
+  role         UserRole @default(OWNER)
+  pinHash      String?  // POS 4-digit PIN (hashed)
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sales        Sale[]   @relation("SalesByUser")
+  stockLogs    StockLog[]
+
+  @@index([businessId])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  businessId    String
+  name          String
+  sku           String?
+  barcode       String?
+  costPrice     Decimal  @db.Decimal(12, 2)
+  sellingPrice  Decimal  @db.Decimal(12, 2)
+  stockQty      Int      @default(0)
+  minStockAlert Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleItems     SaleItem[]
+  stockLogs     StockLog[]
+
+  @@index([businessId])
+  @@index([barcode])
+  @@unique([businessId, sku])
+}
+
+model Sale {
+  id          String      @id @default(cuid())
+  businessId  String
+  createdById String?
+  total       Decimal     @db.Decimal(12, 2)
+  amountPaid  Decimal     @db.Decimal(12, 2)
+  changeDue   Decimal     @db.Decimal(12, 2)
+  paymentType PaymentType
+  syncStatus  SyncStatus  @default(PENDING)
+  syncedAt    DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy   User?       @relation("SalesByUser", fields: [createdById], references: [id], onDelete: SetNull)
+  items       SaleItem[]
+
+  @@index([businessId])
+  @@index([syncStatus])
+  @@index([createdAt])
+}
+
+model SaleItem {
+  id            String   @id @default(cuid())
+  saleId        String
+  productId     String
+  qty           Int
+  unitPrice     Decimal  @db.Decimal(12, 2)
+  lineTotal     Decimal  @db.Decimal(12, 2)
+  costPriceAtSale Decimal? @db.Decimal(12, 2)
+
+  sale          Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model StockLog {
+  id          String   @id @default(cuid())
+  businessId  String
+  productId   String
+  userId      String?
+  changeQty   Int
+  reason      String
+  createdAt   DateTime @default(now())
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([productId])
+  @@index([createdAt])
+}
+

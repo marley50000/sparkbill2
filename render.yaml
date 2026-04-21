@@ -1,0 +1,44 @@
+databases:
+  - name: billspark-db
+    plan: free
+    databaseName: billspark
+    user: billspark
+
+services:
+  - type: web
+    name: billspark-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install --production=false && npx prisma generate
+    startCommand: npm run start:render
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: billspark-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: JWT_SECRET
+        generateValue: true
+      # Set this after deploy to your frontend URL, e.g. https://billspark-web.onrender.com
+      - key: CORS_ORIGIN
+        value: ""
+
+  - type: web
+    name: billspark-web
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install --production=false --legacy-peer-deps && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Set this after deploy to your API URL, e.g. https://billspark-api.onrender.com
+      - key: VITE_API_URL
+        value: ""
+

@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: billspark-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: billspark
+      POSTGRES_USER: billspark
+      POSTGRES_PASSWORD: billspark
+    ports:
+      - "5432:5432"
+    volumes:
+      - billspark_pgdata:/var/lib/postgresql/data
+
+volumes:
+  billspark_pgdata:
